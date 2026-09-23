@@ -1,0 +1,28 @@
+name: Deploy to S3 and Invalidate CloudFront
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::298030125669:role/github-actions-oidc-role
+          aws-region: us-east-1
+
+      - name: Sync files to S3
+        run: aws s3 sync . s3://sam-static-portfolio-2026 --exclude ".git/*" --exclude ".github/*"
+
+      - name: Invalidate CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id E33QZ9JOF8C3FN --paths "/*"
