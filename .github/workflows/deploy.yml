@@ -20,6 +20,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::298030125669:role/github-actions-oidc-role
           aws-region: us-east-1
+          role-skip-session-tagging: true
 
       - name: Sync files to S3
         run: aws s3 sync . s3://sam-static-portfolio-2026 --exclude ".git/*" --exclude ".github/*"
