@@ -17,11 +17,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials via OIDC
+        id: configure_aws_oidc
+        continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::298030125669:role/github-actions-oidc-role
           aws-region: us-east-1
           role-skip-session-tagging: true
+
+      - name: Configure AWS credentials via access keys fallback
+        if: steps.configure_aws_oidc.outcome == 'failure' && secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Fail when AWS authentication is unavailable
+        if: steps.configure_aws_oidc.outcome == 'failure' && (secrets.AWS_ACCESS_KEY_ID == '' || secrets.AWS_SECRET_ACCESS_KEY == '')
+        run: |
+          echo "OIDC role assumption failed and fallback AWS access key secrets are not configured."
+          exit 1
 
       - name: Sync files to S3
         run: aws s3 sync . s3://sam-static-portfolio-2026 --exclude ".git/*" --exclude ".github/*"
